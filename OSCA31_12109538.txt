@@ -1,0 +1,68 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define DISK_SIZE 1024 * 1024 * 1024
+#define BLOCK_SIZE 1024
+#define FRAGMENTATION_THRESHOLD 0.2
+#define MAX_FILE_SIZE DISK_SIZE / BLOCK_SIZE
+
+int main() {
+  // Create a file system with a disk size of 1 GB and a block size of 1 KB.
+  int diskSize = DISK_SIZE;
+  int blockSize = BLOCK_SIZE;
+  int numBlocks = diskSize / blockSize;
+
+  // Create a list of files.
+  int numFiles = 100;
+  int fileSizes[numFiles];
+  for (int i = 0; i < numFiles; i++) {
+    fileSizes[i] = rand() % MAX_FILE_SIZE + 1;
+  }
+
+  // Initialize the fragmentation threshold to 20%.
+  double fragmentationThreshold = FRAGMENTATION_THRESHOLD;
+
+  // Create a random access file for the disk.
+  FILE *disk = fopen("disk.dat", "wb+");
+
+  // Create the files.
+  for (int i = 0; i < numFiles; i++) {
+    // Create a file with the specified size.
+    int fileSize = fileSizes[i];
+    fseek(disk, i * blockSize, SEEK_SET);
+    fwrite(&fileSize, sizeof(int), 1, disk);
+    char* buffer = malloc(fileSize);
+    fwrite(buffer, sizeof(char), fileSize, disk);
+    free(buffer);
+  }
+
+  // Check for fragmentation.
+  double fragmentation = 0;
+  for (int i = 0; i < numFiles; i++) {
+    // Calculate the amount of fragmentation for the file.
+    int fileSize = fileSizes[i];
+    int blockOffset = i * blockSize;
+    int blockCount = fileSize / blockSize;
+    int remainingBlocks = fileSize % blockSize;
+    fragmentation += remainingBlocks;
+    for (int j = 0; j < blockCount; j++) {
+      if (blockOffset + j * blockSize < diskSize) {
+        fragmentation += blockSize;
+      } else {
+        break;
+      }
+    }
+  }
+  fragmentation /= diskSize;
+
+  // Print a warning if the fragmentation is above the threshold.
+  if (fragmentation > fragmentationThreshold) {
+    printf("WARNING: Fragmentation is at %.2f%%. Consider defragmenting the file system.\n", fragmentation);
+  }
+
+  // Close the file.
+  fclose(disk);
+
+  return 0;
+}
